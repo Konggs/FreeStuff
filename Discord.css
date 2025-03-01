@@ -95,10 +95,10 @@
 }
 
 /* catppuccin icon updated with custom logo */
-/* catppuccin icon updated with custom logo */
 .childWrapper__6e9f8:has(> svg:not(.favoriteIcon_dcc7a4)) {
-	background: url('https://raw.githubusercontent.com/Konggs/FreeStuff/refs/heads/main/Test.png') no-repeat;
+	background: url('https://raw.githubusercontent.com/Konggs/FreeStuff/refs/heads/main/Test.png');
 	background-color: transparent !important;
 	background-size: cover;
+} tôi không muốn ẩn background-color: transparent !important;
+	background-size: cover;
 }
-
