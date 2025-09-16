@@ -1,131 +1,90 @@
 local HttpService = game:GetService("HttpService")
 local TeleportService = game:GetService("TeleportService")
 local Player = game.Players.LocalPlayer
-
-local FileLockLib = {}
-function FileLockLib.SetupFile(name,default,timeout)
-    if not isfile(name) then 
-        writefile(name,HttpService:JSONEncode(default))
+local function readFile(name, default)
+    if isfile(name) then
+        local ok, data = pcall(function() return HttpService:JSONDecode(readfile(name)) end)
+        if ok and data then return data end
     end
+    return default
 end
-function FileLockLib.ReadFile(name)
-    if isfile(name) then 
-        return HttpService:JSONDecode(readfile(name)), false
-    end
-    return {}, true
+local function writeFile(name, data)
+    writefile(name, HttpService:JSONEncode(data))
 end
-function FileLockLib.SaveFile(name,data)
-    writefile(name,HttpService:JSONEncode(data))
-end
-
-local function ToUnix(timeStr)
+local function toUnix(timeStr)
     local y,m,d,H,M,S = timeStr:match("(%d+)%-(%d+)%-(%d+)T(%d+):(%d+):(%d+)")
-    return os.time({year=y, month=m, day=d, hour=H, min=M, sec=S})
+    return os.time({year=y,month=m,day=d,hour=H,min=M,sec=S})
 end
-
-local function RefreshServerList(PlaceID)
-    local ListSite, Cursor = {}, ""
-    for i = 1,3 do 
-        local Url = "https://games.roblox.com/v1/games/"..PlaceID.."/servers/Public?sortOrder=Asc&limit=100&excludeFullGames=true"
-        if Cursor ~= "" then 
-            Url = Url .. "&cursor=" .. Cursor
+local function fetchServers(placeId)
+    local servers, cursor = {}, ""
+    for _ = 1,3 do
+        local url = ("https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Asc&limit=100&excludeFullGames=true"):format(placeId)
+        if cursor ~= "" then url ..= "&cursor="..cursor end
+        local ok, body = pcall(game.HttpGet, game, url)
+        if not ok then task.wait(3) break end
+        local site = HttpService:JSONDecode(body)
+        for _,v in pairs(site.data or {}) do
+            local created = v.created and toUnix(v.created) or os.time()
+            table.insert(servers, {
+                id = v.id,
+                playing = v.playing or 0,
+                ping = v.ping or 9999,
+                age = os.time() - created
+            })
         end
-        local Success, Ret = pcall(function()
-            return game:HttpGet(Url)
-        end)
-        if not Success then
-            task.wait(3)
-            break
-        end
-        local Site = HttpService:JSONDecode(Ret)
-        if Site and Site.data then 
-            for _,v in pairs(Site.data) do 
-                local createdUnix = v.created and ToUnix(v.created) or os.time()
-                local age = os.time() - createdUnix
-                local serverPing = v.ping or 9999
-                table.insert(ListSite, {
-                    id = v.id,
-                    playing = v.playing or 0,
-                    ping = serverPing,
-                    age = age
-                })
-            end
-        end
-        if Site.nextPageCursor and Site.nextPageCursor ~= "null" then
-            Cursor = Site.nextPageCursor
-        else
-            break
-        end
+        cursor = site.nextPageCursor or ""
+        if cursor == "" then break end
         task.wait(1)
     end
-    if #ListSite > 0 then
-        table.sort(ListSite, function(a,b)
-            local scoreA = (a.age >= 20*60 and 1 or 0) * 10000 - a.ping - a.playing
-            local scoreB = (b.age >= 20*60 and 1 or 0) * 10000 - b.ping - b.playing
-            return scoreA > scoreB
-        end)
-        FileLockLib.SaveFile("HopServerData.json",ListSite)
-        return ListSite
-    end
-    return {}
+    table.sort(servers, function(a,b)
+        local scoreA = (a.age>=1200 and 1 or 0)*1e5 - a.ping - a.playing
+        local scoreB = (b.age>=1200 and 1 or 0)*1e5 - b.ping - b.playing
+        return scoreA > scoreB
+    end)
+    return servers
 end
-
-local function PickNewServer(PlaceID, FailCount)
-    local Data,NeedUpdateData = FileLockLib.ReadFile("HopServerData.json")
-    if NeedUpdateData or #Data == 0 or FailCount >= 10 then
-        Data = RefreshServerList(PlaceID)
-        FailCount = 0
-        print("[AutoHopServer] Server list refreshed. Found "..tostring(#Data).." servers.")
+local function pickServer(placeId, failCount)
+    local servers = readFile("HopServerData.json", {})
+    if #servers==0 or failCount>=10 then
+        servers = fetchServers(placeId)
+        writeFile("HopServerData.json", servers)
+        print(("[AutoHopServer] Refreshed server list (%d servers)."):format(#servers))
     end
-    if #Data == 0 then return nil, FailCount end
-
-    local ServerIdJoined = {}
-    if isfile("ServerIdJoined.json") then 
-        ServerIdJoined = HttpService:JSONDecode(readfile("ServerIdJoined.json"))
-    end
-    for k,v in pairs(ServerIdJoined) do 
-        if tick() - v > 60*40 then 
-            ServerIdJoined[k] = nil
+    local joined = readFile("ServerIdJoined.json", {})
+    for id,t in pairs(joined) do if tick()-t>2400 then joined[id]=nil end end
+    for _,s in ipairs(servers) do
+        if not joined[s.id] then
+            joined[s.id]=tick()
+            writeFile("ServerIdJoined.json", joined)
+            return s
         end
     end
-
-    for _,entry in ipairs(Data) do
-        local id = entry.id or entry
-        if not ServerIdJoined[id] then
-            ServerIdJoined[id] = tick()
-            writefile("ServerIdJoined.json",HttpService:JSONEncode(ServerIdJoined))
-            return entry, FailCount
-        end
-    end
-    return nil, FailCount
 end
-
-local PlaceID = game.PlaceId
-local CurrentJobId = game.JobId
-local FailCount = 0
-
-print("[AutoHopServer] Starting server hop process...")
-
-while true do
-    local Entry; Entry, FailCount = PickNewServer(PlaceID, FailCount)
-    if Entry then
-        local AgeMin = math.floor((Entry.age or 0) / 60)
-        print(string.format("[AutoHopServer] Attempting server: %s | Players: %d | Ping: %dms | Age: %dm", Entry.id, Entry.playing, Entry.ping, AgeMin))
-        local success, err = pcall(function()
-            TeleportService:TeleportToPlaceInstance(PlaceID, Entry.id, Player)
-        end)
-        if not success then
-            FailCount = FailCount + 1
-            warn("[AutoHopServer] Teleport failed: ".. tostring(err))
+local placeId, jobId, fails = game.PlaceId, game.JobId, 0
+print("[AutoHopServer] Starting server hop...")
+while task.wait() do
+    local s = pickServer(placeId, fails)
+    if s then
+        local ageMin = math.floor((s.age or 0)/60)
+        local sid, players, ping = tostring(s.id or "Unknown"), tonumber(s.playing) or -1, tonumber(s.ping) or -1
+        print(("[AutoHopServer] Attempting server %s | Players: %d | Ping: %dms | Age: %dm"):format(sid,players,ping,ageMin))
+        local ok, err = pcall(function() TeleportService:TeleportToPlaceInstance(placeId, sid, Player) end)
+        if not ok then
+            fails+=1
+            warn("[AutoHopServer] Teleport failed: "..tostring(err))
+            local servers = readFile("HopServerData.json",{})
+            for i,v in ipairs(servers) do if v.id==sid then table.remove(servers,i) break end end
+            writeFile("HopServerData.json",servers)
             task.wait(2)
         end
     else
-        warn("[AutoHopServer] No valid server found. Retrying...")
+        fails+=1
+        warn("[AutoHopServer] No valid server. Retrying...")
         task.wait(3)
     end
     task.wait(5)
-    if game.JobId ~= CurrentJobId then
-        print("[AutoHopServer] Successfully hopped to new server:", game.JobId)
+    if game.JobId ~= jobId then
+        print("[AutoHopServer] Hopped successfully to new server:", game.JobId)
         break
     end
 end
