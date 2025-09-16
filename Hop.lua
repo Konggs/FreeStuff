@@ -20,36 +20,42 @@ local function toUnix(str)
     local y,m,d,H,M,S = str:match("(%d+)%-(%d+)%-(%d+)T(%d+):(%d+):(%d+)")
     return os.time({year=y,month=m,day=d,hour=H,min=M,sec=S})
 end
-
 local function fetchServers(placeId)
     local servers, cursor = {}, ""
     for _ = 1, 3 do
         local url = ("https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Asc&limit=100&excludeFullGames=true"):format(placeId)
         if cursor ~= "" then url ..= "&cursor="..cursor end
-        local ok, body = pcall(game.HttpGet, game, url)
-        if not ok then break end
-        local site = HttpService:JSONDecode(body)
-        for _,v in ipairs(site.data or {}) do
-            local created = v.created and toUnix(v.created) or os.time()
-            table.insert(servers, {
-                id = v.id,
-                playing = v.playing or 0,
-                ping = v.ping or 9999,
-                age = os.time() - created
-            })
+        local ok, body = pcall(function() return game:HttpGet(url) end)
+        if ok and body then
+            local site = HttpService:JSONDecode(body)
+            for _,v in ipairs(site.data or {}) do
+                local created = v.created and toUnix(v.created) or os.time()
+                table.insert(servers, {
+                    id = v.id,
+                    playing = v.playing or 0,
+                    ping = v.ping or 9999,
+                    age = os.time() - created
+                })
+            end
+            cursor = site.nextPageCursor or ""
+            if cursor == "" then break end
+        else
+            warn("[AutoHopServer] Failed to fetch page, retrying...")
+            task.wait(2)
         end
-        cursor = site.nextPageCursor or ""
-        if cursor == "" then break end
         task.wait(1)
     end
-    table.sort(servers, function(a,b)
-        local scoreA = (a.age>=1200 and 1 or 0)*1e5 - a.ping - a.playing
-        local scoreB = (b.age>=1200 and 1 or 0)*1e5 - b.ping - b.playing
-        return scoreA > scoreB
-    end)
+    if #servers == 0 then
+        warn("[AutoHopServer] No servers fetched, will retry later")
+    else
+        table.sort(servers, function(a,b)
+            local scoreA = (a.age>=1200 and 1 or 0)*1e5 - a.ping - a.playing
+            local scoreB = (b.age>=1200 and 1 or 0)*1e5 - b.ping - b.playing
+            return scoreA > scoreB
+        end)
+    end
     return servers
 end
-
 local function pickServer(placeId, failCount)
     local servers = fetchServers(placeId)
     writeFile("HopServerData.json", servers)
