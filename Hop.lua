@@ -44,14 +44,15 @@ local function PickNewServer(PlaceID)
             local Site = HttpService:JSONDecode(Ret)
             if Site and Site.data then 
                 for _,v in pairs(Site.data) do 
-                    if v.created then
-                        local createdUnix = ToUnix(v.created)
-                        local age = os.time() - createdUnix
-                        local serverPing = v.ping or 9999
-                        if age >= 20 * 60 and serverPing <= 150 then
-                            table.insert(ListSite, {id=v.id, playing=v.playing, ping=serverPing})
-                        end
-                    end
+                    local createdUnix = v.created and ToUnix(v.created) or os.time()
+                    local age = os.time() - createdUnix
+                    local serverPing = v.ping or 9999
+                    table.insert(ListSite, {
+                        id = v.id,
+                        playing = v.playing or 0,
+                        ping = serverPing,
+                        age = age
+                    })
                 end
             end
             if Site.nextPageCursor and Site.nextPageCursor ~= "null" then
@@ -63,20 +64,19 @@ local function PickNewServer(PlaceID)
         end
         if #ListSite > 0 then
             table.sort(ListSite, function(a,b)
-                if a.playing == b.playing then
-                    return a.ping < b.ping
-                else
-                    return a.playing < b.playing
-                end
+                local scoreA = (a.age >= 20*60 and 1 or 0) * 10000 - a.ping - a.playing
+                local scoreB = (b.age >= 20*60 and 1 or 0) * 10000 - b.ping - b.playing
+                return scoreA > scoreB
             end)
             FileLockLib.SaveFile("HopServerData.json",ListSite)
             Data = ListSite
-            print("[AutoHopServer] Server list refreshed. Found "..tostring(#ListSite).." valid servers.")
+            print("[AutoHopServer] Server list refreshed. Found "..tostring(#ListSite).." servers.")
         else
-            warn("[AutoHopServer] No valid servers (age >20min & ping <=150ms).")
+            warn("[AutoHopServer] No servers retrieved.")
             return nil
         end
     end
+
     local ServerIdJoined = {}
     if isfile("ServerIdJoined.json") then 
         ServerIdJoined = HttpService:JSONDecode(readfile("ServerIdJoined.json"))
@@ -86,14 +86,16 @@ local function PickNewServer(PlaceID)
             ServerIdJoined[k] = nil
         end
     end
+
     for _,entry in ipairs(Data) do
         local id = entry.id or entry
         if not ServerIdJoined[id] then
             ServerIdJoined[id] = tick()
             writefile("ServerIdJoined.json",HttpService:JSONEncode(ServerIdJoined))
-            return id, entry.playing, entry.ping
+            return id, entry.playing, entry.ping, entry.age
         end
     end
+
     warn("[AutoHopServer] Could not find a suitable server to join.")
     return nil
 end
@@ -102,16 +104,17 @@ local PlaceID = game.PlaceId
 local CurrentJobId = game.JobId
 print("[AutoHopServer] Starting server hop process...")
 while true do
-    local Site, Players, Ping = PickNewServer(PlaceID)
+    local Site, Players, Ping, Age = PickNewServer(PlaceID)
     if Site then
-        print(string.format("[AutoHopServer] Attempting to join server: %s | Players: %d | Ping: %dms", Site, Players or -1, Ping or -1))
+        local AgeMin = math.floor((Age or 0) / 60)
+        print(string.format("[AutoHopServer] Attempting server: %s | Players: %d | Ping: %dms | Age: %dm", Site, Players or -1, Ping or -1, AgeMin))
         TeleportService:TeleportToPlaceInstance(PlaceID, Site, Player)
     else
-        warn("[AutoHopServer] No valid server found. Retrying...")
+        warn("[AutoHopServer] No server available. Retrying...")
     end
     task.wait(5)
     if game.JobId ~= CurrentJobId then
-        print("[AutoHopServer] Successfully hopped to a new server:", game.JobId)
+        print("[AutoHopServer] Successfully hopped to new server:", game.JobId)
         break
     end
 end
