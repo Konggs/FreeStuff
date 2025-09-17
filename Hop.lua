@@ -62,7 +62,7 @@ local function fetchServers(placeId)
     local servers, cursor = {}, ""
     local maxPages = 5
     for _ = 1, maxPages do
-        local url = ("https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Asc&limit=100&excludeFullGames=true"):format(placeId)
+        local url = ("https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Asc&limit=100&excludeFullGames=false"):format(placeId)
         if cursor ~= "" then url ..= "&cursor="..cursor end
         local ok, body = safeHttpGet(url)
         if not ok then
