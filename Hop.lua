@@ -1,6 +1,5 @@
 local HttpService = game:GetService("HttpService")
 local TeleportService = game:GetService("TeleportService")
-local Player = game.Players.LocalPlayer
 
 local AllIDs, foundAnything = {}, ""
 local actualHour = os.date("!*t").hour
@@ -58,7 +57,7 @@ local function TPReturner()
     pcall(function()
         writefile("NotSameServers.json", HttpService:JSONEncode(AllIDs))
     end)
-    TeleportService:TeleportToPlaceInstance(game.PlaceId, id, Player)
+    TeleportService:TeleportToPlaceInstance(game.PlaceId, id, game.Players.LocalPlayer)
     task.wait(3)
 end
 
