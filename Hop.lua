@@ -42,6 +42,7 @@ local function TPReturner()
         currentServers, serverIndex = {}, 1
         for _, v in ipairs(servers.data) do
             local id, age = tostring(v.id), tonumber(v.age) or 0
+            local playing, maxPlayers = tonumber(v.playing) or 0, tonumber(v.maxPlayers) or 0
             local duplicate = false
             for _, existing in ipairs(AllIDs) do
                 if id == tostring(existing) then
@@ -49,15 +50,18 @@ local function TPReturner()
                     break
                 end
             end
-            if not duplicate and (age >= 1200) then
+            if not duplicate and (age >= 1200) and (playing <= maxPlayers - 2) then
                 table.insert(currentServers, v)
             end
         end
         if #currentServers == 0 then
-            print("[DEBUG] No server with age >= 20m, fallback to all")
+            print("[DEBUG] No valid server (age >=20m & 2+ slots free), fallback to all")
             currentServers = servers.data
         else
-            print("[DEBUG] Found", #currentServers, "servers with age >= 20m")
+            table.sort(currentServers, function(a, b)
+                return (a.playing or 0) < (b.playing or 0)
+            end)
+            print("[DEBUG] Found", #currentServers, "valid servers, sorted by players")
         end
     end
 
@@ -66,6 +70,8 @@ local function TPReturner()
     if not v then return end
 
     local id, age = tostring(v.id), tonumber(v.age) or 0
+    local playing, maxPlayers = tonumber(v.playing) or 0, tonumber(v.maxPlayers) or 0
+
     for _, existing in ipairs(AllIDs) do
         if id == tostring(existing) then
             print("[DEBUG] Skipping duplicate ID:", id)
@@ -73,14 +79,24 @@ local function TPReturner()
         end
     end
 
-    print("[DEBUG] Teleporting to server:", id, " Age:", age, "s")
+    print(("[DEBUG] Teleporting to server %s | Age: %dm | Players: %d/%d"):format(
+        id, math.floor(age/60), playing, maxPlayers
+    ))
+
     table.insert(AllIDs, id)
     pcall(function()
         writefile("NotSameServers.json", HttpService:JSONEncode(AllIDs))
     end)
+
     TeleportService:TeleportToPlaceInstance(game.PlaceId, id, Player)
     task.wait(2)
 end
+
+TeleportService.TeleportInitFailed:Connect(function(_, result, reason)
+    warn("[DEBUG] Teleport failed:", result, reason)
+    task.wait(1)
+    TPReturner()
+end)
 
 while task.wait(1) do
     pcall(TPReturner)
