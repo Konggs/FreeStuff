@@ -41,7 +41,7 @@ local function TPReturner()
         foundAnything = servers.nextPageCursor or ""
         currentServers, serverIndex = {}, 1
         for _, v in ipairs(servers.data) do
-            local id, age = tostring(v.id), tonumber(v.age) or 0
+            local id = tostring(v.id)
             local playing, maxPlayers = tonumber(v.playing) or 0, tonumber(v.maxPlayers) or 0
             local duplicate = false
             for _, existing in ipairs(AllIDs) do
@@ -50,12 +50,12 @@ local function TPReturner()
                     break
                 end
             end
-            if not duplicate and (age >= 1200) and (playing <= maxPlayers - 2) then
+            if not duplicate and playing <= maxPlayers - 2 then
                 table.insert(currentServers, v)
             end
         end
         if #currentServers == 0 then
-            print("[DEBUG] No valid server (age >=20m & 2+ slots free), fallback to all")
+            print("[DEBUG] No valid server (2+ slots free), fallback to all")
             currentServers = servers.data
         else
             table.sort(currentServers, function(a, b)
@@ -69,7 +69,7 @@ local function TPReturner()
     serverIndex += 1
     if not v then return end
 
-    local id, age = tostring(v.id), tonumber(v.age) or 0
+    local id = tostring(v.id)
     local playing, maxPlayers = tonumber(v.playing) or 0, tonumber(v.maxPlayers) or 0
 
     for _, existing in ipairs(AllIDs) do
@@ -79,8 +79,8 @@ local function TPReturner()
         end
     end
 
-    print(("[DEBUG] Teleporting to server %s | Age: %dm | Players: %d/%d"):format(
-        id, math.floor(age/60), playing, maxPlayers
+    print(("[DEBUG] Teleporting to server %s | Players: %d/%d"):format(
+        id, playing, maxPlayers
     ))
 
     table.insert(AllIDs, id)
@@ -94,7 +94,7 @@ end
 
 TeleportService.TeleportInitFailed:Connect(function(_, result, reason)
     warn("[DEBUG] Teleport failed:", result, reason)
-    task.wait(1)
+    task.wait(0.5)
     TPReturner()
 end)
 
