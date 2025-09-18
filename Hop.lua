@@ -75,7 +75,9 @@ local function TPReturner()
     local playing, maxPlayers = tonumber(v.playing) or 0, tonumber(v.maxPlayers) or 0
     for _, existing in ipairs(AllIDs) do
         if id == tostring(existing) then
-            print("[DEBUG] Skipping duplicate ID:", id)
+            print("[DEBUG] Removing duplicate server:", id)
+            table.remove(currentServers, serverIndex - 1)
+            pcall(function() writefile("ServerCache.json", HttpService:JSONEncode(currentServers)) end)
             return
         end
     end
