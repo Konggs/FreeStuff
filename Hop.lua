@@ -1,62 +1,159 @@
 local HttpService = game:GetService("HttpService")
 local TeleportService = game:GetService("TeleportService")
-local AllIDs, foundAnything = {}, ""
 local actualHour = os.date("!*t").hour
-local currentServers, serverIndex = {}, 1
-pcall(function() AllIDs = HttpService:JSONDecode(readfile("NotSameServers.json")) end)
-if type(AllIDs) ~= "table" or AllIDs[1] ~= actualHour then
-    AllIDs = {actualHour}
-    pcall(function()
-        writefile("NotSameServers.json", HttpService:JSONEncode(AllIDs))
-    end)
-else
-    print("[DEBUG] Loaded NotSameServers for hour:", actualHour)
+local AllIDs = {}
+local AllIDsSet = {}
+local foundCursor = ""
+local currentServers = {}
+local serverIndex = 1
+local function safeRead(path)
+    local ok, content = pcall(readfile, path)
+    if not ok or not content then return nil end
+    local ok2, decoded = pcall(function() return HttpService:JSONDecode(content) end)
+    if not ok2 then return nil end
+    return decoded
 end
-pcall(function() currentServers = HttpService:JSONDecode(readfile("ServerCache.json")) end)
-if type(currentServers) ~= "table" then currentServers = {} end
+local function safeWrite(path, obj) pcall(function() writefile(path, HttpService:JSONEncode(obj)) end) end
 
+local function loadAllIDs()
+    local data = safeRead("NotSameServers.json")
+    if type(data) ~= "table" or data[1] ~= actualHour then
+        AllIDs = {actualHour}
+        AllIDsSet = {}
+        safeWrite("NotSameServers.json", AllIDs)
+        return
+    end
+    AllIDs = data
+    AllIDsSet = {}
+    for i = 2, #AllIDs do AllIDsSet[tostring(AllIDs[i])] = true end
+end
+
+local function loadServerCache()
+    local data = safeRead("ServerCache.json")
+    if type(data) == "table" then
+        currentServers = data
+    else
+        currentServers = {}
+    end
+    serverIndex = 1
+end
+loadAllIDs()
+loadServerCache()
+local function trimAllIDs(limit)
+    limit = limit or 5000
+    if #AllIDs <= limit + 1 then return end
+    local keep = {AllIDs[1]}
+    local startIdx = #AllIDs - limit + 1
+    for i = startIdx, #AllIDs do table.insert(keep, AllIDs[i]) end
+    AllIDs = keep
+    AllIDsSet = {}
+    for i = 2, #AllIDs do AllIDsSet[tostring(AllIDs[i])] = true end
+    safeWrite("NotSameServers.json", AllIDs)
+end
+local function sanitizeCurrentServers()
+    if serverIndex > 200 then
+        for i = 1, serverIndex - 1 do currentServers[i] = nil end
+        local newTbl = {}
+        for i = serverIndex, #currentServers do
+            table.insert(newTbl, currentServers[i])
+        end
+        currentServers = newTbl
+        serverIndex = 1
+        safeWrite("ServerCache.json", currentServers)
+    end
+end
+local function httpGetJson(url, retries)
+    retries = retries or 3
+    local backoff = 0.2
+    for i = 1, retries do
+        local ok, res = pcall(function() return game:HttpGet(url) end)
+        if ok and res then
+            local ok2, decoded = pcall(function() return HttpService:JSONDecode(res) end)
+            if ok2 and decoded then return decoded end
+        end
+        task.wait(backoff)
+        backoff = math.min(2, backoff * 2)
+    end
+    return nil
+end
+local function addServerToCache(v) if not v or not v.id then return end table.insert(currentServers, v) end
 local function GetServers(cursor)
-    local url = ("https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Asc&limit=100"):format(game.PlaceId)
-    if cursor and cursor ~= "" then url ..= "&cursor=" .. cursor end
-    local success, result = pcall(function() return HttpService:JSONDecode(game:HttpGet(url)) end)
-    if success and result and result.data then
-        foundAnything = result.nextPageCursor or ""
+    local loops = 0
+    while loops < 6 do
+        loops = loops + 1
+        local url = ("https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Asc&limit=100"):format(game.PlaceId)
+        if cursor and cursor ~= "" then url = url .. "&cursor=" .. cursor end
+        local result = httpGetJson(url, 3)
+        if not result or type(result) ~= "table" or not result.data then break end
+        foundCursor = result.nextPageCursor or ""
         for _, v in ipairs(result.data) do
             local id = tostring(v.id)
             local playing, maxPlayers = tonumber(v.playing) or 0, tonumber(v.maxPlayers) or 0
-            local duplicate = false
-            for _, existing in ipairs(AllIDs) do
-                if id == tostring(existing) then
-                    duplicate = true
-                    break
-                end
+            if id ~= tostring(game.JobId) and not AllIDsSet[id] and playing <= maxPlayers - 2 then
+                addServerToCache(v)
             end
-            if not duplicate and playing <= maxPlayers - 2 then table.insert(currentServers, v) end
         end
-        pcall(function() writefile("ServerCache.json", HttpService:JSONEncode(currentServers)) end)
+        safeWrite("ServerCache.json", currentServers)
+        if foundCursor == "" then break end
+        cursor = foundCursor
+        if #currentServers > 300 then break end
     end
 end
-local function EnsureServerCache() if #currentServers - serverIndex < 50 then GetServers(foundAnything) end end
+local function EnsureServerCache()
+    if #currentServers - serverIndex < 50 and foundCursor ~= "" then
+        GetServers(foundCursor)
+    elseif #currentServers - serverIndex < 50 and foundCursor == "" then
+        GetServers("")
+    end
+end
+local function saveAllIDsIfNeeded() pcall(function() safeWrite("NotSameServers.json", AllIDs) end) end
 local function TPReturner()
-    EnsureServerCache()
-    while currentServers[serverIndex] do
+    while true do
+        EnsureServerCache()
         local v = currentServers[serverIndex]
-        serverIndex += 1
-        local id = tostring(v.id)
-        local duplicate = false
-        for _, existing in ipairs(AllIDs) do
-            if id == tostring(existing) then
-                duplicate = true
+        if not v then
+            if foundCursor and foundCursor ~= "" then
+                GetServers(foundCursor)
+                task.wait(0.2)
+                v = currentServers[serverIndex]
+            end
+            if not v then
                 break
             end
         end
-        if duplicate then continue end
+        serverIndex = serverIndex + 1
+        local id = tostring(v.id)
+        if AllIDsSet[id] then
+            sanitizeCurrentServers()
+            continue
+        end
+        AllIDsSet[id] = true
         table.insert(AllIDs, id)
-        pcall(function() writefile("NotSameServers.json", HttpService:JSONEncode(AllIDs)) end)
-        local success, err = pcall(function() TeleportService:TeleportToPlaceInstance(game.PlaceId, id, game.Players.LocalPlayer) end)
-        if success then return else warn("[Teleport Failed] Trying next server. Reason:", err) end
+        trimAllIDs(5000)
+        saveAllIDsIfNeeded()
+        local ok, err = pcall(function()
+            TeleportService:TeleportToPlaceInstance(game.PlaceId, id, game.Players.LocalPlayer)
+        end)
+        if ok then return end
+        warn("[Teleport Failed]", tostring(err))
+        sanitizeCurrentServers()
+        task.wait(0.15)
     end
-    print("[INFO] No more servers to hop or all failed.")
+    task.spawn(function()
+        task.wait(1)
+        serverIndex = 1
+        currentServers = {}
+        foundCursor = ""
+        GetServers("")
+    end)
 end
 TeleportService.TeleportInitFailed:Connect(function() task.defer(TPReturner) end)
 task.defer(TPReturner)
+task.spawn(function()
+    while task.wait(10) do
+        sanitizeCurrentServers()
+        trimAllIDs(5000)
+        safeWrite("ServerCache.json", currentServers)
+        safeWrite("NotSameServers.json", AllIDs)
+    end
+end)
