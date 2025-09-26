@@ -83,3 +83,61 @@ game.Lighting.ChildAdded:Connect(function(v)
     end
 end)
 game:GetService("RunService"):Set3dRenderingEnabled(false)
+
+local function DisableAnimation(model)
+    local humanoid = model:FindFirstChildOfClass("Humanoid")
+    if humanoid then
+        local animator = humanoid:FindFirstChildOfClass("Animator")
+        if animator then
+            for _, track in ipairs(animator:GetPlayingAnimationTracks()) do track:Stop() end
+            animator.AnimationPlayed:Connect(function(track) track:Stop() end)
+        end
+    end
+    local animController = model:FindFirstChildOfClass("AnimationController")
+    if animController then
+        local animator = animController:FindFirstChildOfClass("Animator")
+        if animator then
+            for _, track in ipairs(animator:GetPlayingAnimationTracks()) do
+                track:Stop()
+            end
+            animator.AnimationPlayed:Connect(function(track)
+                track:Stop()
+            end)
+        end
+    end
+end
+local function DisableMeshPart(meshPart) meshPart.Transparency = 1 meshPart.CanCollide = false meshPart.CanTouch = false meshPart.CanQuery = false end
+local function DisableParticle(emitter) emitter.Enabled = false end
+for _, obj in ipairs(game:GetService("Workspace"):GetDescendants()) do
+    if obj:IsA("Model") then
+        DisableAnimation(obj)
+    elseif obj:IsA("MeshPart") then
+        DisableMeshPart(obj)
+    elseif obj:IsA("ParticleEmitter") then
+        DisableParticle(obj)
+    end
+end
+game:GetService("Workspace").DescendantAdded:Connect(function(obj)
+    if obj:IsA("Model") then
+        DisableAnimation(obj)
+    elseif obj:IsA("Humanoid") or obj:IsA("AnimationController") then
+        local model = obj.Parent
+        if model and model:IsA("Model") then
+            DisableAnimation(model)
+        end
+    elseif obj:IsA("MeshPart") then
+        DisableMeshPart(obj)
+    elseif obj:IsA("ParticleEmitter") then
+        DisableParticle(obj)
+    end
+end)
+for _, obj in ipairs(game:GetService("Workspace"):GetChildren()) do
+    if obj:IsA("Part") or obj:IsA("MeshPart") then
+        obj:Destroy()
+    end
+end
+game:GetService("Workspace").ChildAdded:Connect(function(obj)
+    if obj:IsA("Part") or obj:IsA("MeshPart") then
+        obj:Destroy()
+    end
+end)
