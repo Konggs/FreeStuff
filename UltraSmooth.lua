@@ -82,3 +82,4 @@ game.Lighting.ChildAdded:Connect(function(v)
         v.Enabled = false
     end
 end)
+game:GetService("RunService"):Set3dRenderingEnabled(false)
