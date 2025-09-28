@@ -1,4 +1,3 @@
-task.wait(5)
 for i,v in next, workspace:GetDescendants() do pcall(function() v.Transparency = 1 end) end
 a = workspace
 a.DescendantAdded:Connect(function(v) pcall(function() v.Transparency = 1 end) end)
