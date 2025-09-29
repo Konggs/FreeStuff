@@ -105,3 +105,4 @@ game:GetService("Workspace").ChildAdded:Connect(function(obj)
         obj:Destroy()
     end
 end)
+game:GetService("RunService"):Set3dRenderingEnabled(false)
