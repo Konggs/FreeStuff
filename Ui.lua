@@ -109,7 +109,7 @@ spawn(function()
 end)
 Note.MouseButton1Click:Connect(function()
     if setclipboard then
-        setclipboard("https://discord.gg/YuukiV2")
+        setclipboard("https://discord.gg/YuukiHub")
     else
         warn("Your exploit does not support clipboard copy!")
     end
