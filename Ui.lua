@@ -43,9 +43,19 @@ MoneyLabel.Font = Enum.Font.Gotham
 MoneyLabel.TextSize = 20
 MoneyLabel.TextColor3 = Color3.fromRGB(200, 255, 200)
 MoneyLabel.Parent = Overlay
+local TotalDamageLabel = Instance.new("TextLabel")
+TotalDamageLabel.AnchorPoint = Vector2.new(0.5, 0.5)
+TotalDamageLabel.Position = UDim2.new(0.5, 0, 0.60, 0)
+TotalDamageLabel.Size = UDim2.new(1, 0, 0, 30)
+TotalDamageLabel.BackgroundTransparency = 1
+TotalDamageLabel.Text = "Total Damage: 0"
+TotalDamageLabel.Font = Enum.Font.Gotham
+TotalDamageLabel.TextSize = 20
+TotalDamageLabel.TextColor3 = Color3.fromRGB(253, 0, 0)
+TotalDamageLabel.Parent = Overlay
 local RebirthLabel = Instance.new("TextLabel")
 RebirthLabel.AnchorPoint = Vector2.new(0.5, 0.5)
-RebirthLabel.Position = UDim2.new(0.5, 0, 0.60, 0)
+RebirthLabel.Position = UDim2.new(0.5, 0, 0.65, 0)
 RebirthLabel.Size = UDim2.new(1, 0, 0, 30)
 RebirthLabel.BackgroundTransparency = 1
 RebirthLabel.Text = "Rebirth: 0"
@@ -79,17 +89,21 @@ local function getTimeSinceStart()
 end
 getgenv().money = 0
 getgenv().rebirth = 0
+getgenv().damage = 0
 local function UpdateUI()
     TimeLabel.Text = "Time: " .. getTimeSinceStart()
     MoneyLabel.Text = "Money: " .. tostring(getgenv().money)
+    TotalDamageLabel.Text = "Total Damage: " .. tostring(getgenv().damage)
     RebirthLabel.Text = "Rebirth: " .. tostring(getgenv().rebirth)
 end
 local function GetCurrentMoney() getgenv().money = game.Players.LocalPlayer.leaderstats.Money.Value end
 local function GetRebirthTime() getgenv().rebirth = tonumber(game.Players.LocalPlayer.PlayerGui.Main.Stats.Frame.ScrollingFrame.Rebirth.Value.Text) end
+local function GetTotalDamage() getgenv().damage = game.Players.LocalPlayer:GetAttribute("TotalDamage") end
 spawn(function()
     while task.wait(1) do
         GetRebirthTime()
         GetCurrentMoney()
+        GetTotalDamage()
         UpdateUI()
     end
 end)
