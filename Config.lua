@@ -1,6 +1,7 @@
 script_key="dDFJYQMQHVgDqqPktGgXYYuXnNYnpoXS";
 getgenv().YuukiHub = {
     ["Performance"] = {["FPS Lock"] = 2, ["Low CPU"] = true},
+    ["Equip Best Delays"] = 300,
     ["Buy Seed"] = {
         "King Limone Seed","Mango Seed","Shroombino Seed","Tomatrio Seed","Mr Carrot Seed","Carnivorous Plant Seed","Grape Seed","Cocotank Seed","Watermelon Seed",
         ["Eggplant Seed"] = 5,["Dragon Fruit Seed"] = 5,["Sunflower Seed"] = 5,["Pumpkin Seed"] = 5,["Strawberry Seed"] = 5,["Cactus Seed"] = 5},
