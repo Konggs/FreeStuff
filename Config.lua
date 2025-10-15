@@ -25,4 +25,5 @@ getgenv().YuukiHub = {
     ["Start Delete Plant At"] = 100,
     ["Start Delete Brainrot At"] = 100,
 }
-repeat wait()spawn(function()loadstring(game:HttpGet("https://api.luarmor.net/files/v3/loaders/2c0716d3a841a2f1ed0569a57ff337f8.lua"))()end)wait(20)until getgenv().Loaded
+task.delay(300, function() if not getgenv().Loaded then game:GetService("TeleportService"):Teleport(game.PlaceId) end end)
+repeat wait()spawn(function()loadstring(game:HttpGet("https://api.luarmor.net/files/v3/loaders/17130305da586e83253f031ed98d5836.lua"))()end)wait(20)until getgenv().Loaded
