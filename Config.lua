@@ -26,4 +26,7 @@ getgenv().YuukiHub = {
     ["Start Delete Brainrot At"] = 50,
 }
 task.delay(120, function() if not getgenv().Loaded then game:GetService("TeleportService"):Teleport(game.PlaceId) end end)
-repeat wait()spawn(function()loadstring(game:HttpGet("https://api.luarmor.net/files/v3/loaders/17130305da586e83253f031ed98d5836.lua"))()end)wait(20)until getgenv().Loaded
+repeat task.wait(5)
+    local success, err = pcall(function() loadstring(game:HttpGet("https://api.luarmor.net/files/v3/loaders/17130305da586e83253f031ed98d5836.lua"))() end)
+    if not success then task.wait(15) end
+until getgenv().Loaded
