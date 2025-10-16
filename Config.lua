@@ -22,8 +22,8 @@ getgenv().YuukiHub = {
     ["Ignore Keep Until Max Rebirth"] = true,
     ["Keep Plant Rarity"] = { "Secret", "Limited", "Godly" },
     ["Keep Brainrot Money Per Second"] = 40000, -- Keep Brainrot with $/s ≥ 20k
-    ["Start Delete Plant At"] = 100,
-    ["Start Delete Brainrot At"] = 100,
+    ["Start Delete Plant At"] = 80,
+    ["Start Delete Brainrot At"] = 50,
 }
 task.delay(120, function() if not getgenv().Loaded then game:GetService("TeleportService"):Teleport(game.PlaceId) end end)
 repeat wait()spawn(function()loadstring(game:HttpGet("https://api.luarmor.net/files/v3/loaders/17130305da586e83253f031ed98d5836.lua"))()end)wait(20)until getgenv().Loaded
