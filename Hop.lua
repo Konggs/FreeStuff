@@ -1,12 +1,12 @@
 local PlaceID=game.PlaceId;local HttpService,TeleportService,Players=game:GetService("HttpService"),game:GetService("TeleportService"),game:GetService("Players")
-local FOLDER="ServerHop";local TIME=FOLDER.."/time.json"
+local FOLDER="ServerHop";local TIME=FOLDER.."/time.json"; local used = used or {}
 if not isfolder(FOLDER) then makefolder(FOLDER) end
 local function GetFiles() local t={}; for _,f in ipairs(listfiles(FOLDER)) do if f:find(".json") and not f:find("time") then t[#t+1]=f end; end; return t end
 local function Load(p) local ok,d=pcall(function() return HttpService:JSONDecode(readfile(p)) end) ;return ok and d or {} end
 local function Save(p,d) writefile(p,HttpService:JSONEncode(d)) end
 local function Last() return isfile(TIME) and (Load(TIME).t or 0) or 0 end
 local function Set() Save(TIME,{t=os.time()}) end
-local function GetRandom() local f=GetFiles() ;if #f==0 then return end;local d=Load(f[math.random(#f)]) ;if #d==0 then return end ;return d[math.random(#d)] end
+local function GetRandom() local f = GetFiles() if #f == 0 then return end local d = Load(f[math.random(#f)]) if #d == 0 then return end for i = #d, 2, -1 do local j = math.random(1, i) d[i], d[j] = d[j], d[i] end local start = math.random(1, #d) for i = 0, #d - 1 do local id = d[(start + i - 1) % #d + 1] if not used[id] then used[id] = true return id end end end
 local function Fetch()
     local cursor,index,page="",0,0
     local success=false
