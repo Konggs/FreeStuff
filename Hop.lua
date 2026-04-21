@@ -14,7 +14,7 @@ local function Fetch()
         local url="https://games.roblox.com/v1/games/"..PlaceID.."/servers/Public?sortOrder=Desc&limit=100"..(cursor~="" and "&cursor="..cursor or "")
         local ok,res=pcall(function() return game:HttpGet(url) end)
         if not ok then break end ;local dec=HttpService:JSONDecode(res) ;if dec.errors then break end
-        local list={} ;for _,v in pairs(dec.data or {}) do if v.playing>=18 and v.playing<v.maxPlayers then list[#list+1]=v.id end end
+        local list={} ;for _,v in pairs(dec.data or {}) do if v.playing>=16 and v.playing<v.maxPlayers then list[#list+1]=v.id end end
         print("page:",page,"servers:",#list)
         Save(FOLDER.."/"..index..".json",list)
         index+=1 ;success=true ;cursor=dec.nextPageCursor or "" ;task.wait(0.3)
