@@ -6,7 +6,7 @@ local function Load(p) local ok,d=pcall(function() return HttpService:JSONDecode
 local function Save(p,d) writefile(p,HttpService:JSONEncode(d)) end
 local function Last() return isfile(TIME) and (Load(TIME).t or 0) or 0 end
 local function Set() Save(TIME,{t=os.time()}) end
-local function GetRandom() local f=GetFiles() ;if #f==0 then return end;local d=Load(f[math.random(#f)]) ;if #d==0 then return end ;return d[math.random(#d)] end
+local rng = Random.new() local function GetRandom() local f = GetFiles() if #f == 0 then return end local fileIndex = rng:NextInteger(1, #f) local d = Load(f[fileIndex]) if not d or #d == 0 then return end local dataIndex = rng:NextInteger(1, #d) return d[dataIndex] end
 local function Fetch()
     local cursor,index,page="",0,0
     local success=false
@@ -14,7 +14,7 @@ local function Fetch()
         local url="https://games.roblox.com/v1/games/"..PlaceID.."/servers/Public?sortOrder=Desc&limit=100"..(cursor~="" and "&cursor="..cursor or "")
         local ok,res=pcall(function() return game:HttpGet(url) end)
         if not ok then break end ;local dec=HttpService:JSONDecode(res) ;if dec.errors then break end
-        local list={} ;for _,v in pairs(dec.data or {}) do if v.playing>=15 and v.playing<v.maxPlayers then list[#list+1]=v.id end end
+        local list={} ;for _,v in pairs(dec.data or {}) do if v.playing>=18 and v.playing<v.maxPlayers then list[#list+1]=v.id end end
         print("page:",page,"servers:",#list)
         Save(FOLDER.."/"..index..".json",list)
         index+=1 ;success=true ;cursor=dec.nextPageCursor or "" ;task.wait(0.3)
