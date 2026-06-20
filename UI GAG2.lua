@@ -1,11 +1,16 @@
 local CoreGui = game:GetService("CoreGui")
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
+if gethui then
+    local hui = gethui()
+    if hui:FindFirstChild("HubInfoUI") then
+        hui.HubInfoUI:Destroy()
+    end
+end
 if CoreGui:FindFirstChild("HubInfoUI") then
     CoreGui.HubInfoUI:Destroy()
-elseif LocalPlayer.PlayerGui:FindFirstChild("HubInfoUI") then
-    LocalPlayer.PlayerGui.HubInfoUI:Destroy()
 end
+
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "HubInfoUI"
 ScreenGui.ResetOnSpawn = false
@@ -16,13 +21,11 @@ elseif syn and syn.protect_gui then
     syn.protect_gui(ScreenGui)
     ScreenGui.Parent = CoreGui
 else
-    local success, _ = pcall(function()
+    pcall(function()
         ScreenGui.Parent = CoreGui
     end)
-    if not success then
-        ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
-    end
 end
+
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
 MainFrame.Parent = ScreenGui
@@ -42,6 +45,7 @@ UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
 UIListLayout.Padding = UDim.new(0, 25)
 UIListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 UIListLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+
 local TitleLabel = Instance.new("TextLabel")
 TitleLabel.Name = "TitleLabel"
 TitleLabel.Parent = MainFrame
