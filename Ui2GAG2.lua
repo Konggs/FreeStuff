@@ -12,13 +12,16 @@ if CoreGui:FindFirstChild("KaitunTracker") then
 end
 
 local env = getgenv()
-if not env.DiscordLink then env.DiscordLink = "..." end
+if not env.DiscordLink then env.DiscordLink = "discord.gg/SeaHub" end
 
 local SeaConfigs = {
     PlayerInfo = {
         {key = "Username", value = LocalPlayer.Name},
         {key = "Coins", value = "0"},
         {key = "Planting", value = "0 / 0"},
+        {key = "Pets", value = "0"},
+        {key = "Max Slots", value = "0"},
+        {key = "Expansion", value = "0"},
     },
 
     GameInfo = {
@@ -29,6 +32,9 @@ local SeaConfigs = {
         ["username"] = Color3.fromRGB(255, 255, 255),
         ["coins"] = Color3.fromRGB(255, 219, 93),
         ["planting"] = Color3.fromRGB(0, 255, 106),
+        ["pets"] = Color3.fromRGB(255, 120, 120),
+        ["max slots"] = Color3.fromRGB(255, 150, 150),
+        ["expansion"] = Color3.fromRGB(150, 200, 255),
         ["status"] = Color3.fromRGB(252, 255, 60),
     },
 
@@ -96,7 +102,7 @@ function Trackstack()
 	Title.Position = UDim2.new(0, 0, 0.08, 0)
 	Title.Size = UDim2.new(1, 0, 0, 25)
 	Title.Font = Enum.Font.SourceSansBold
-	Title.Text = "Status: ".. tostring(env.DiscordLink)
+	Title.Text = "Status: ".. tostring(LocalPlayer.Name)
 	Title.TextColor3 = SeaConfigs.TitleColor
 	Title.TextSize = 20
 
@@ -387,17 +393,19 @@ function Trackstack()
 		end
 	end
 	local idMapping = {
-		["Account"]  = { category = "Player", key = "Username" },
-		["Stats1"]   = { category = "Player", key = "Coins" },
-		["Stats2"]   = { category = "Player", key = "Planting" },
-		["Status"]   = { category = "Game",   key = "Status" },
+		["Account"]    = { category = "Player", key = "Username" },
+		["Stats1"]     = { category = "Player", key = "Coins" },
+		["Stats2"]     = { category = "Player", key = "Planting" },
+		["Pets"]       = { category = "Player", key = "Pets" },
+		["MaxSlots"]   = { category = "Player", key = "Max Slots" },
+		["Expansion"]  = { category = "Player", key = "Expansion" },
+		["Status"]     = { category = "Game",   key = "Status" },
 	}
 
 	function UpdateUIInfo(id, text)
 		Title.Text = "Status: " .. tostring(env.DiscordLink)
 		updateTime()
 
-		-- Uptime updates the Time label in the header directly
 		if id == "Uptime" then
 			if SeaConfigs.ShowTime and TimeLabel then
 				TimeLabel.Text = tostring(text)
