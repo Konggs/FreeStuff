@@ -16,7 +16,7 @@ if not env.DiscordLink then env.DiscordLink = "discord.gg/SeaHub" end
 
 local SeaConfigs = {
     PlayerInfo = {
-        {key = "Username", value = LocalPlayer.Name},
+        {key = "Username", value = "😎 "..LocalPlayer.Name},
         {key = "Coins", value = "0"},
         {key = "Planting", value = "0 / 0"},
         {key = "Pets", value = "0"},
@@ -102,7 +102,7 @@ function Trackstack()
 	Title.Position = UDim2.new(0, 0, 0.08, 0)
 	Title.Size = UDim2.new(1, 0, 0, 25)
 	Title.Font = Enum.Font.SourceSansBold
-	Title.Text = "Status: ".. tostring(LocalPlayer.Name)
+	Title.Text = tostring(env.DiscordLink)
 	Title.TextColor3 = SeaConfigs.TitleColor
 	Title.TextSize = 20
 
@@ -403,7 +403,7 @@ function Trackstack()
 	}
 
 	function UpdateUIInfo(id, text)
-		Title.Text = "Status: " .. tostring(env.DiscordLink)
+		Title.Text = tostring(env.DiscordLink)
 		updateTime()
 
 		if id == "Uptime" then
